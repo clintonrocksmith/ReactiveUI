@@ -8,7 +8,6 @@ using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reactive;
-using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Reflection;
@@ -25,12 +24,6 @@ namespace ReactiveUI.AndroidSupport
     public class ReactiveRecyclerViewViewHolder<TViewModel> : RecyclerView.ViewHolder, ILayoutViewHost, IViewFor<TViewModel>, IReactiveNotifyPropertyChanged<ReactiveRecyclerViewViewHolder<TViewModel>>, IReactiveObject, ICanActivate
             where TViewModel : class, IReactiveObject
     {
-        /// <summary>
-        /// Disposes a disposable resources that are disposed together when the View Holder is Disposed.
-        /// </summary>
-        [SuppressMessage("StyleCop.CSharp.MaintainabilityRules", "SA1401: Field should be private", Justification = "Legacy reasons")]
-        protected readonly CompositeDisposable CompositeDisposable = new CompositeDisposable();
-
         /// <summary>
         /// Gets all public accessible properties.
         /// </summary>
@@ -52,8 +45,6 @@ namespace ReactiveUI.AndroidSupport
         protected ReactiveRecyclerViewViewHolder(View view)
             : base(view)
         {
-            CompositeDisposable.Add(_activated);
-            CompositeDisposable.Add(_deactivated);
             SetupRxObj();
 
             Selected = Observable.FromEventPattern(
@@ -180,7 +171,8 @@ namespace ReactiveUI.AndroidSupport
         {
             if (disposing)
             {
-                CompositeDisposable?.Dispose();
+                _activated?.Dispose();
+                _deactivated?.Dispose();
             }
 
             base.Dispose(disposing);
