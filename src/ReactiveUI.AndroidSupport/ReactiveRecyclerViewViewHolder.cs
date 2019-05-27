@@ -7,7 +7,10 @@ using System;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Reactive;
+using System.Reactive.Disposables;
 using System.Reactive.Linq;
+using System.Reactive.Subjects;
 using System.Reflection;
 using System.Runtime.Serialization;
 using Android.Support.V7.Widget;
@@ -19,7 +22,7 @@ namespace ReactiveUI.AndroidSupport
     /// A <see cref="RecyclerView.ViewHolder"/> implementation that binds to a reactive view model.
     /// </summary>
     /// <typeparam name="TViewModel">The type of the view model.</typeparam>
-    public class ReactiveRecyclerViewViewHolder<TViewModel> : RecyclerView.ViewHolder, ILayoutViewHost, IViewFor<TViewModel>, IReactiveNotifyPropertyChanged<ReactiveRecyclerViewViewHolder<TViewModel>>, IReactiveObject
+    public class ReactiveRecyclerViewViewHolder<TViewModel> : RecyclerView.ViewHolder, ILayoutViewHost, IViewFor<TViewModel>, IReactiveNotifyPropertyChanged<ReactiveRecyclerViewViewHolder<TViewModel>>, IReactiveObject, ICanActivate
             where TViewModel : class, IReactiveObject
     {
         /// <summary>
@@ -31,7 +34,14 @@ namespace ReactiveUI.AndroidSupport
         [IgnoreDataMember]
         protected Lazy<PropertyInfo[]> AllPublicProperties;
 
+        /// <summary>
+        /// Disposes a disposable resources that are disposed together when the View Holder is Disposed.
+        /// </summary>
+        protected readonly CompositeDisposable CompositeDisposable = new CompositeDisposable();
+
         private TViewModel _viewModel;
+        private readonly Subject<Unit> _activated = new Subject<Unit>();
+        private readonly Subject<Unit> _deactivated = new Subject<Unit>();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ReactiveRecyclerViewViewHolder{TViewModel}"/> class.
@@ -40,6 +50,9 @@ namespace ReactiveUI.AndroidSupport
         protected ReactiveRecyclerViewViewHolder(View view)
             : base(view)
         {
+            CompositeDisposable.Add(_activated);
+            CompositeDisposable.Add(_deactivated);
+            
             SetupRxObj();
 
             Selected = Observable.FromEventPattern(
@@ -92,9 +105,27 @@ namespace ReactiveUI.AndroidSupport
         public TViewModel ViewModel
         {
             get => _viewModel;
-            set => this.RaiseAndSetIfChanged(ref _viewModel, value);
+            set
+            {
+                var willActivate = value == null;
+                this.RaiseAndSetIfChanged(ref _viewModel, value);
+                if (willActivate)
+                {
+                    _activated.OnNext(Unit.Default);
+                }
+            }
         }
 
+        /// <summary>
+        /// Gets a signal when the ViewModel is attached for the first time.
+        /// </summary>
+        public IObservable<Unit> Activated => _activated.AsObservable();
+
+        /// <summary>
+        /// Gets a signal when the viewholder is deactivated.
+        /// </summary>
+        public IObservable<Unit> Deactivated => _deactivated.AsObservable();
+        
         /// <summary>
         /// Gets an observable which signals when exceptions are thrown.
         /// </summary>
@@ -154,5 +185,16 @@ namespace ReactiveUI.AndroidSupport
             AllPublicProperties = new Lazy<PropertyInfo[]>(() =>
                 GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance).ToArray());
         }
+
+        /// <inheritdoc/>
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                CompositeDisposable?.Dispose();
+            }
+            base.Dispose(disposing);
+        }
+        
     }
 }

@@ -100,12 +100,12 @@ namespace ReactiveUI.AndroidSupport
         public IObservable<Exception> ThrownExceptions => this.GetThrownExceptionsObservable();
 
         /// <summary>
-        /// Gets a singal when the activity fragment is activated.
+        /// Gets a signal when the activity fragment is activated.
         /// </summary>
         public IObservable<Unit> Activated => _activated.AsObservable();
 
         /// <summary>
-        /// Gets a singal when the activity fragment is deactivated.
+        /// Gets a signal when the activity fragment is deactivated.
         /// </summary>
         public IObservable<Unit> Deactivated => _deactivated.AsObservable();
 
