@@ -26,6 +26,12 @@ namespace ReactiveUI.AndroidSupport
             where TViewModel : class, IReactiveObject
     {
         /// <summary>
+        /// Disposes a disposable resources that are disposed together when the View Holder is Disposed.
+        /// </summary>
+        [SuppressMessage("StyleCop.CSharp.MaintainabilityRules", "SA1401: Field should be private", Justification = "Legacy reasons")]
+        protected readonly CompositeDisposable CompositeDisposable = new CompositeDisposable();
+
+        /// <summary>
         /// Gets all public accessible properties.
         /// </summary>
         [SuppressMessage("StyleCop.CSharp.MaintainabilityRules", "SA1401: Field should be private", Justification = "Legacy reasons")]
@@ -34,14 +40,10 @@ namespace ReactiveUI.AndroidSupport
         [IgnoreDataMember]
         protected Lazy<PropertyInfo[]> AllPublicProperties;
 
-        /// <summary>
-        /// Disposes a disposable resources that are disposed together when the View Holder is Disposed.
-        /// </summary>
-        protected readonly CompositeDisposable CompositeDisposable = new CompositeDisposable();
-
-        private TViewModel _viewModel;
         private readonly Subject<Unit> _activated = new Subject<Unit>();
         private readonly Subject<Unit> _deactivated = new Subject<Unit>();
+
+        private TViewModel _viewModel;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ReactiveRecyclerViewViewHolder{TViewModel}"/> class.
@@ -52,7 +54,6 @@ namespace ReactiveUI.AndroidSupport
         {
             CompositeDisposable.Add(_activated);
             CompositeDisposable.Add(_deactivated);
-            
             SetupRxObj();
 
             Selected = Observable.FromEventPattern(
@@ -125,7 +126,7 @@ namespace ReactiveUI.AndroidSupport
         /// Gets a signal when the viewholder is deactivated.
         /// </summary>
         public IObservable<Unit> Deactivated => _deactivated.AsObservable();
-        
+
         /// <summary>
         /// Gets an observable which signals when exceptions are thrown.
         /// </summary>
@@ -174,6 +175,17 @@ namespace ReactiveUI.AndroidSupport
             PropertyChangedEventManager.DeliverEvent(this, args);
         }
 
+        /// <inheritdoc/>
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                CompositeDisposable?.Dispose();
+            }
+
+            base.Dispose(disposing);
+        }
+
         [OnDeserialized]
         private void SetupRxObj(StreamingContext sc)
         {
@@ -185,16 +197,5 @@ namespace ReactiveUI.AndroidSupport
             AllPublicProperties = new Lazy<PropertyInfo[]>(() =>
                 GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance).ToArray());
         }
-
-        /// <inheritdoc/>
-        protected override void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                CompositeDisposable?.Dispose();
-            }
-            base.Dispose(disposing);
-        }
-        
     }
 }
